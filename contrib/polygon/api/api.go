@@ -129,8 +129,14 @@ type StreamAggregate struct {
 	E int64   `json:"-"`
 }
 
+const (
+	AggPrefix   = "AM."
+	QuotePrefix = "Q."
+	TradePrefix = "T."
+)
+
 // Stream from the polygon nats server
-func Stream(handler func(m *nats.Msg), symbols []string) (err error) {
+func Stream(handler func(m *nats.Msg), prefix string, symbols []string) (err error) {
 	nc, _ := nats.Connect(
 		servers,
 		nats.Token(apiKey))
@@ -138,14 +144,39 @@ func Stream(handler func(m *nats.Msg), symbols []string) (err error) {
 	if symbols != nil && len(symbols) > 0 {
 		for _, symbol := range symbols {
 			if _, err = nc.Subscribe(
-				fmt.Sprintf("AM.%s", symbol),
+				prefix+symbol,
 				handler); err != nil {
 				return
 			}
 		}
 	} else {
-		_, err = nc.Subscribe("AM.*", handler)
+		_, err = nc.Subscribe(prefix+"*", handler)
 	}
 
 	return
+}
+
+// PolyTrade is the reference structure sent
+// by polygon for quote data
+type PolyTrade struct {
+	Symbol     string  `json:"sym"`
+	Exchange   int     `json:"-"`
+	Price      float64 `json:"p"`
+	Size       int64   `json:"s"`
+	Timestamp  int64   `json:"t"`
+	Conditions []int   `json:"c"`
+}
+
+// PolyQuote is the reference structure sent
+// by polygon for quote data
+type PolyQuote struct {
+	Symbol      string  `json:"sym"`
+	Condition   int     `json:"-"`
+	BidExchange int     `json:"-"`
+	AskExchange int     `json:"-"`
+	BidPrice    float64 `json:"bp"`
+	AskPrice    float64 `json:"ap"`
+	BidSize     int64   `json:"bs"`
+	AskSize     int64   `json:"as"`
+	Timestamp   int64   `json:"t"`
 }
